@@ -25,9 +25,8 @@ import com.example.android.architecture.blueprints.todoapp.data.source.FakeRepos
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineContext
+import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -35,7 +34,7 @@ import org.junit.Test
 /**
  * Unit tests for the implementation of [StatisticsViewModel]
  */
-@ObsoleteCoroutinesApi
+@ExperimentalCoroutinesApi
 class StatisticsViewModelTest {
 
     // Executes each task synchronously using Architecture Components.
@@ -49,7 +48,7 @@ class StatisticsViewModelTest {
     private val tasksRepository = FakeRepository()
 
     // A CoroutineContext that can be controlled from tests
-    private val testContext = TestCoroutineContext()
+    private val testContext = TestCoroutineDispatcher()
 
     // Set the main coroutines dispatcher for unit testing.
     @ExperimentalCoroutinesApi
@@ -62,14 +61,11 @@ class StatisticsViewModelTest {
     }
 
     @Test
-    fun loadEmptyTasksFromRepository_EmptyResults() = runBlocking {
+    fun loadEmptyTasksFromRepository_EmptyResults() = runBlockingTest {
         // Given an initialized StatisticsViewModel with no tasks
 
         // When loading of Tasks is requested
         statisticsViewModel.start()
-
-        // Execute pending coroutines actions
-        testContext.triggerActions()
 
         // Then the results are empty
         assertThat(LiveDataTestUtil.getValue(statisticsViewModel.empty)).isTrue()
@@ -87,9 +83,6 @@ class StatisticsViewModelTest {
         // When loading of Tasks is requested
         statisticsViewModel.start()
 
-        // Execute pending coroutines actions
-        testContext.triggerActions()
-
         // Then the results are not empty
         assertThat(LiveDataTestUtil.getValue(statisticsViewModel.empty))
             .isFalse()
@@ -100,7 +93,7 @@ class StatisticsViewModelTest {
     }
 
     @Test
-    fun loadStatisticsWhenTasksAreUnavailable_CallErrorToDisplay() = runBlocking {
+    fun loadStatisticsWhenTasksAreUnavailable_CallErrorToDisplay() = runBlockingTest {
         val errorViewModel = StatisticsViewModel(
             DefaultTasksRepository(
                 FakeFailingTasksRemoteDataSource,
@@ -112,9 +105,6 @@ class StatisticsViewModelTest {
         // When statistics are loaded
         errorViewModel.start()
 
-        // Execute pending coroutines actions
-        testContext.triggerActions()
-
         // Then an error message is shown
         assertThat(LiveDataTestUtil.getValue(errorViewModel.empty)).isTrue()
         assertThat(LiveDataTestUtil.getValue(errorViewModel.error)).isTrue()
@@ -122,6 +112,9 @@ class StatisticsViewModelTest {
 
     @Test
     fun loadTasks_loading() {
+        // Pause dispatcher so we can verify initial values
+        testContext.pauseDispatcher()
+
         // Load the task in the viewmodel
         statisticsViewModel.start()
 
@@ -129,7 +122,7 @@ class StatisticsViewModelTest {
         assertThat(LiveDataTestUtil.getValue(statisticsViewModel.dataLoading)).isTrue()
 
         // Execute pending coroutines actions
-        testContext.triggerActions()
+        testContext.resumeDispatcher()
 
         // Then progress indicator is hidden
         assertThat(LiveDataTestUtil.getValue(statisticsViewModel.dataLoading)).isFalse()

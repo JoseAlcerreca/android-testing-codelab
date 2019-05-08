@@ -25,7 +25,7 @@ import com.example.android.architecture.blueprints.todoapp.data.source.FakeRepos
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineContext
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -33,7 +33,7 @@ import org.junit.Test
 /**
  * Unit tests for the implementation of [AddEditTaskViewModel].
  */
-@ObsoleteCoroutinesApi
+@ExperimentalCoroutinesApi
 class AddEditTaskViewModelTest {
 
     // Subject under test
@@ -43,7 +43,7 @@ class AddEditTaskViewModelTest {
     private lateinit var tasksRepository: FakeRepository
 
     // A CoroutineContext that can be controlled from tests
-    private val testContext = TestCoroutineContext()
+    private val testContext = TestCoroutineDispatcher()
 
     // Set the main coroutines dispatcher for unit testing.
     @ExperimentalCoroutinesApi
@@ -76,7 +76,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel.saveTask()
 
         // Execute pending coroutines actions
-        testContext.triggerActions()
+        testContext.resumeDispatcher()
 
         val newTask = tasksRepository.tasksServiceData.values.first()
 
@@ -87,6 +87,9 @@ class AddEditTaskViewModelTest {
 
     @Test
     fun loadTasks_loading() {
+        // Pause dispatcher so we can verify initial values
+        testContext.pauseDispatcher()
+
         // Load the task in the viewmodel
         addEditTaskViewModel.start(task.id)
 
@@ -94,7 +97,7 @@ class AddEditTaskViewModelTest {
         assertThat(getValue(addEditTaskViewModel.dataLoading)).isTrue()
 
         // Execute pending coroutines actions
-        testContext.triggerActions()
+        testContext.resumeDispatcher()
 
         // Then progress indicator is hidden
         assertThat(getValue(addEditTaskViewModel.dataLoading)).isFalse()
@@ -107,9 +110,6 @@ class AddEditTaskViewModelTest {
 
         // Load the task with the viewmodel
         addEditTaskViewModel.start(task.id)
-
-        // Execute pending coroutines actions
-        testContext.triggerActions()
 
         // Verify a task is loaded
         assertThat(getValue(addEditTaskViewModel.title)).isEqualTo(task.title)

@@ -37,7 +37,7 @@ import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepo
 import com.example.android.architecture.blueprints.todoapp.util.ADD_EDIT_RESULT_OK
 import com.example.android.architecture.blueprints.todoapp.util.getTasksBlocking
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -66,7 +66,7 @@ class AddEditTaskFragmentTest {
     }
 
     @After
-    fun cleanupDb() = runBlocking {
+    fun cleanupDb() = runBlockingTest {
         ServiceLocator.resetRepository()
     }
 

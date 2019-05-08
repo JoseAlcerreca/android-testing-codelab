@@ -29,9 +29,8 @@ import com.example.android.architecture.blueprints.todoapp.util.DELETE_RESULT_OK
 import com.example.android.architecture.blueprints.todoapp.util.EDIT_RESULT_OK
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineContext
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +38,7 @@ import org.junit.Test
 /**
  * Unit tests for the implementation of [TasksViewModel]
  */
-@ObsoleteCoroutinesApi
+@ExperimentalCoroutinesApi
 class TasksViewModelTest {
 
     // Subject under test
@@ -49,7 +48,7 @@ class TasksViewModelTest {
     private lateinit var tasksRepository: FakeRepository
 
     // A CoroutineContext that can be controlled from tests
-    private val testContext = TestCoroutineContext()
+    private val testContext = TestCoroutineDispatcher()
 
     // Set the main coroutines dispatcher for unit testing.
     @ExperimentalCoroutinesApi
@@ -73,6 +72,9 @@ class TasksViewModelTest {
 
     @Test
     fun loadAllTasksFromRepository_loadingTogglesAndDataLoaded() {
+        // Pause dispatcher so we can verify initial values
+        testContext.pauseDispatcher()
+
         // Given an initialized TasksViewModel with initialized tasks
         // When loading of Tasks is requested
         tasksViewModel.setFiltering(TasksFilterType.ALL_TASKS)
@@ -84,7 +86,7 @@ class TasksViewModelTest {
         assertThat(LiveDataTestUtil.getValue(tasksViewModel.dataLoading)).isTrue()
 
         // Execute pending coroutines actions
-        testContext.triggerActions()
+        testContext.resumeDispatcher()
 
         // Then progress indicator is hidden
         assertThat(LiveDataTestUtil.getValue(tasksViewModel.dataLoading)).isFalse()
@@ -102,9 +104,6 @@ class TasksViewModelTest {
         // Load tasks
         tasksViewModel.loadTasks(true)
 
-        // Execute pending coroutines actions
-        testContext.triggerActions()
-
         // Then progress indicator is hidden
         assertThat(LiveDataTestUtil.getValue(tasksViewModel.dataLoading)).isFalse()
 
@@ -121,9 +120,6 @@ class TasksViewModelTest {
         // Load tasks
         tasksViewModel.loadTasks(true)
 
-        // Execute pending coroutines actions
-        testContext.triggerActions()
-
         // Then progress indicator is hidden
         assertThat(LiveDataTestUtil.getValue(tasksViewModel.dataLoading)).isFalse()
 
@@ -138,9 +134,6 @@ class TasksViewModelTest {
 
         // Load tasks
         tasksViewModel.loadTasks(true)
-
-        // Execute pending coroutines actions
-        testContext.triggerActions()
 
         // Then progress indicator is hidden
         assertThat(LiveDataTestUtil.getValue(tasksViewModel.dataLoading)).isFalse()
@@ -173,15 +166,12 @@ class TasksViewModelTest {
     }
 
     @Test
-    fun clearCompletedTasks_clearsTasks() = runBlocking {
+    fun clearCompletedTasks_clearsTasks() = runBlockingTest {
         // When completed tasks are cleared
         tasksViewModel.clearCompletedTasks()
 
         // Fetch tasks
         tasksViewModel.loadTasks(true)
-
-        // Execute pending coroutines actions
-        testContext.triggerActions()
 
         // Fetch tasks
         val allTasks = LiveDataTestUtil.getValue(tasksViewModel.items)
@@ -237,9 +227,6 @@ class TasksViewModelTest {
         // Complete task
         tasksViewModel.completeTask(task, true)
 
-        // Execute pending coroutines actions
-        testContext.triggerActions()
-
         // Verify the task is completed
         assertThat(tasksRepository.tasksServiceData[task.id]?.isCompleted).isTrue()
 
@@ -256,9 +243,6 @@ class TasksViewModelTest {
 
         // Activate task
         tasksViewModel.completeTask(task, false)
-
-        // Execute pending coroutines actions
-        testContext.triggerActions()
 
         // Verify the task is active
         assertThat(tasksRepository.tasksServiceData[task.id]?.isActive).isTrue()
